@@ -55,7 +55,7 @@ function handleRouteError(e: unknown): Response {
 
 const app = new Hono<{ Bindings: Env }>();
 
-const MERAKI = 'https://cdn.merakianalytics.com/riot/lol/resources/latest/en-US';
+const MERAKI_API_URL = 'https://cdn.merakianalytics.com/riot/lol/resources/latest/en-US';
 
 type ChampionRaw = Record<string, unknown>;
 
@@ -118,7 +118,7 @@ app.get('/', (c: any) => {
 // Get all champions
 app.get('/champions', async (c) => {
 	try {
-		const response = await fetch(`${MERAKI}/champions.json`);
+		const response = await fetch(`${MERAKI_API_URL}/champions.json`);
 		if (!response.ok) throw upstreamError(response);
 
 		const data = (await response.json()) as Record<string, ChampionRaw>;
@@ -136,7 +136,7 @@ app.get('/champions/:id', async (c) => {
 	try {
 		const id = c.req.param('id');
 
-		const response = await fetch(`${MERAKI}/champions/${id}.json`);
+		const response = await fetch(`${MERAKI_API_URL}/champions/${id}.json`);
 		if (!response.ok) throw upstreamError(response);
 
 		const data = await response.json();
