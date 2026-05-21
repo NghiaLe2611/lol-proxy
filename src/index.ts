@@ -97,6 +97,49 @@ function slimChampion(raw: ChampionRaw): ChampionSlim {
 	} as ChampionSlim;
 }
 
+/** Mutates `data`. */
+function modifyAatroxDetail(data: ChampionRaw): ChampionRaw {
+	const abilities = data.abilities as Record<string, unknown> | undefined;
+	if (!abilities?.Q || !Array.isArray(abilities.Q)) return data;
+
+	const qSpells = abilities.Q as Record<string, unknown>[];
+	for (const spell of qSpells) {
+		if (spell && typeof spell === 'object') spell.icon = null;
+	}
+
+	const firstSpell = qSpells[0];
+	const effects = firstSpell?.effects;
+	if (!Array.isArray(effects)) return data;
+
+	const effectIcons = [
+		'https://raw.communitydragon.org/latest/game/assets/characters/aatrox/hud/icons2d/aatrox_q.png',
+		'https://raw.communitydragon.org/latest/game/assets/characters/aatrox/hud/icons2d/aatrox_q2.png',
+		'https://raw.communitydragon.org/latest/game/assets/characters/aatrox/hud/icons2d/aatrox_q3.png',
+	];
+	// 3Q of Aatrox
+	const effectIndices = [2, 3, 4];
+	for (let i = 0; i < effectIcons.length; i++) {
+		const idx = effectIndices[i];
+		const eff = effects[idx];
+		if (eff && typeof eff === 'object') (eff as Record<string, unknown>).icon = effectIcons[i];
+	}
+
+	return data;
+}
+
+/** Transform champion detail từ Meraki; switch theo `key` (vd. Aatrox), không đổi tướng khác. */
+function modifyChampionDetail(data: ChampionRaw): ChampionRaw {
+	const key = data.key;
+	if (typeof key !== 'string') return data;
+
+	switch (key) {
+		case 'Aatrox':
+			return modifyAatroxDetail(structuredClone(data));
+		default:
+			return data;
+	}
+}
+
 app.use('*', async (c, next) => {
 	const origin = corsOriginFromEnv(c.env.CORS_ALLOWED_ORIGINS);
 	const allowCredentials = origin !== '*';
@@ -139,9 +182,9 @@ app.get('/champions/:id', async (c) => {
 		const response = await fetch(`${MERAKI_API_URL}/champions/${id}.json`);
 		if (!response.ok) throw upstreamError(response);
 
-		const data = await response.json();
+		const data = (await response.json()) as ChampionRaw;
 
-		return c.json(data);
+		return c.json(modifyChampionDetail(data));
 	} catch (e) {
 		return handleRouteError(e);
 	}
