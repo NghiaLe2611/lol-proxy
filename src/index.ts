@@ -19,6 +19,8 @@
 
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
+import { ChampionRaw, ChampionSlim } from './types';
+import { modifyAatroxDetail, modifyChampionDetail } from './utils';
 
 type ErrWithStatus = Error & { statusCode: number };
 
@@ -57,26 +59,6 @@ const app = new Hono<{ Bindings: Env }>();
 
 const MERAKI_API_URL = 'https://cdn.merakianalytics.com/riot/lol/resources/latest/en-US';
 
-type ChampionRaw = Record<string, unknown>;
-
-type ChampionSlim = {
-	id: number;
-	key: string;
-	name: string;
-	title?: string;
-	icon?: string;
-	resource?: unknown;
-	attackType?: string;
-	adaptiveType?: string;
-	positions?: unknown;
-	roles?: unknown;
-	attributeRatings?: unknown;
-	releaseDate?: unknown;
-	patchLastChanged?: unknown;
-	releasePatch?: unknown;
-	price?: unknown;
-};
-
 function slimChampion(raw: ChampionRaw): ChampionSlim {
 	return {
 		id: raw.id,
@@ -95,49 +77,6 @@ function slimChampion(raw: ChampionRaw): ChampionSlim {
 		releasePatch: raw.releasePatch,
 		price: raw.price,
 	} as ChampionSlim;
-}
-
-/** Mutates `data`. */
-function modifyAatroxDetail(data: ChampionRaw): ChampionRaw {
-	const abilities = data.abilities as Record<string, unknown> | undefined;
-	if (!abilities?.Q || !Array.isArray(abilities.Q)) return data;
-
-	const qSpells = abilities.Q as Record<string, unknown>[];
-	for (const spell of qSpells) {
-		if (spell && typeof spell === 'object') spell.icon = null;
-	}
-
-	const firstSpell = qSpells[0];
-	const effects = firstSpell?.effects;
-	if (!Array.isArray(effects)) return data;
-
-	const effectIcons = [
-		'https://raw.communitydragon.org/latest/game/assets/characters/aatrox/hud/icons2d/aatrox_q.png',
-		'https://raw.communitydragon.org/latest/game/assets/characters/aatrox/hud/icons2d/aatrox_q2.png',
-		'https://raw.communitydragon.org/latest/game/assets/characters/aatrox/hud/icons2d/aatrox_q3.png',
-	];
-	// 3Q of Aatrox
-	const effectIndices = [2, 3, 4];
-	for (let i = 0; i < effectIcons.length; i++) {
-		const idx = effectIndices[i];
-		const eff = effects[idx];
-		if (eff && typeof eff === 'object') (eff as Record<string, unknown>).icon = effectIcons[i];
-	}
-
-	return data;
-}
-
-/** Transform champion detail từ Meraki; switch theo `key` (vd. Aatrox), không đổi tướng khác. */
-function modifyChampionDetail(data: ChampionRaw): ChampionRaw {
-	const key = data.key;
-	if (typeof key !== 'string') return data;
-
-	switch (key) {
-		case 'Aatrox':
-			return modifyAatroxDetail(structuredClone(data));
-		default:
-			return data;
-	}
 }
 
 app.use('*', async (c, next) => {
