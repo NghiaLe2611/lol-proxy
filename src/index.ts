@@ -20,7 +20,7 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { ChampionRaw, ChampionSlim } from './types';
-import { modifyAatroxDetail, modifyChampionDetail } from './utils';
+import { modifyChampionDetail } from './utils';
 
 type ErrWithStatus = Error & { statusCode: number };
 
