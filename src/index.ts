@@ -129,4 +129,18 @@ app.get('/champions/:id', async (c) => {
 	}
 });
 
+// Get items
+app.get('/items', async (c) => {
+	try {
+		const response = await fetch(`${MERAKI_API_URL}/items.json`);
+		if (!response.ok) throw upstreamError(response);
+
+		const data = (await response.json()) as Record<string, ChampionRaw>;
+		const list = Object.values(data);
+		return c.json(list);
+	} catch (e) {
+		return handleRouteError(e);
+	}
+});
+
 export default app;
