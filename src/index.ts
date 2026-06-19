@@ -22,6 +22,94 @@ import { cors } from 'hono/cors';
 import { ChampionRaw, ChampionSlim } from './types';
 import { modifyChampionDetail } from './utils';
 
+type ItemRaw = Record<string, unknown>;
+
+const ITEM_GROUP_BY_ID = new Map<number, string>([
+	// Hydra
+	[3077, 'Hydra'],
+	[6698, 'Hydra'],
+	[3074, 'Hydra'],
+	[6631, 'Hydra'],
+	[3748, 'Hydra'],
+	// Jungle
+	[1101, 'Jungle'],
+	[1102, 'Jungle'],
+	[1103, 'Jungle'],
+	// Manaflow
+	[3003, 'Manaflow'],
+	[3121, 'Manaflow'],
+	[3004, 'Manaflow'],
+	[3042, 'Manaflow'],
+	[3040, 'Manaflow'],
+	[3070, 'Manaflow'],
+	[3119, 'Manaflow'],
+	// Spellblade
+	[3057, 'Spellblade'],
+	[6662, 'Spellblade'],
+	[3100, 'Spellblade'],
+	[3078, 'Spellblade'],
+	// Stasis
+	[2420, 'Stasis'],
+	[3157, 'Stasis'],
+	// Starter Support
+	[3867, 'Starter Support'],
+	[3877, 'Starter Support'],
+	[3869, 'Starter Support'],
+	[3870, 'Starter Support'],
+	[3871, 'Starter Support'],
+	[3876, 'Starter Support'],
+	// Fatality
+	[3035, 'Fatality'],
+	[3071, 'Fatality'],
+	[3036, 'Fatality'],
+	[3033, 'Fatality'],
+	[6694, 'Fatality'],
+	[3302, 'Fatality'],
+	// Lifeline
+	[3003, 'Lifeline'],
+	[3155, 'Lifeline'],
+	[6673, 'Lifeline'],
+	[3156, 'Lifeline'],
+	[3040, 'Lifeline'],
+	[3053, 'Lifeline'],
+	// Eternity
+	[3803, 'Eternity'],
+	[6657, 'Eternity'],
+	// Quicksilver
+	[3139, 'Quicksilver'],
+	[3140, 'Quicksilver'],
+]);
+
+function itemRank(item: ItemRaw): string[] {
+	const rank = item.rank;
+	if (!Array.isArray(rank)) return [];
+	return rank.filter((r): r is string => typeof r === 'string');
+}
+
+function resolveItemGroup(item: ItemRaw): string | undefined {
+	const id = item.id;
+	if (typeof id === 'number') {
+		const byId = ITEM_GROUP_BY_ID.get(id);
+		if (byId) return byId;
+	}
+
+	const name = typeof item.name === 'string' ? item.name : '';
+	const rank = itemRank(item);
+
+	if (name.includes('Doran') && rank.includes('STARTER')) return 'Starter';
+	if (rank.includes('TRINKET')) return 'Trinket';
+	if (rank.includes('BOOTS')) return 'Boots';
+
+	return undefined;
+}
+
+function modifyItems(items: ItemRaw[]): Array<ItemRaw & { group?: string }> {
+	return items.map((item) => {
+		const group = resolveItemGroup(item);
+		return group ? { ...item, group } : item;
+	});
+}
+
 type ErrWithStatus = Error & { statusCode: number };
 
 /** Dev: `"*"`. Production: comma-separated origins in `CORS_ALLOWED_ORIGINS` (wrangler `env.production`). */
@@ -135,8 +223,8 @@ app.get('/items', async (c) => {
 		const response = await fetch(`${MERAKI_API_URL}/items.json`);
 		if (!response.ok) throw upstreamError(response);
 
-		const data = (await response.json()) as Record<string, ChampionRaw>;
-		const list = Object.values(data);
+		const data = (await response.json()) as Record<string, ItemRaw>;
+		const list = modifyItems(Object.values(data));
 		return c.json(list);
 	} catch (e) {
 		return handleRouteError(e);
