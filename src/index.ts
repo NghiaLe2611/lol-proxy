@@ -21,64 +21,13 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { ChampionRaw, ChampionSlim } from './types';
 import { modifyChampionDetail } from './utils';
+import { ITEM_GROUP_BY_ID } from './constants';
+import { fetchChampionSkills } from './skills';
+import { parseSkillDescription } from './skillDescription';
+
+const VERSION = '16.13.1';
 
 type ItemRaw = Record<string, unknown>;
-
-const ITEM_GROUP_BY_ID = new Map<number, string>([
-	// Hydra
-	[3077, 'Hydra'],
-	[6698, 'Hydra'],
-	[3074, 'Hydra'],
-	[6631, 'Hydra'],
-	[3748, 'Hydra'],
-	// Jungle
-	[1101, 'Jungle'],
-	[1102, 'Jungle'],
-	[1103, 'Jungle'],
-	// Manaflow
-	[3003, 'Manaflow'],
-	[3121, 'Manaflow'],
-	[3004, 'Manaflow'],
-	[3042, 'Manaflow'],
-	[3040, 'Manaflow'],
-	[3070, 'Manaflow'],
-	[3119, 'Manaflow'],
-	// Spellblade
-	[3057, 'Spellblade'],
-	[6662, 'Spellblade'],
-	[3100, 'Spellblade'],
-	[3078, 'Spellblade'],
-	// Stasis
-	[2420, 'Stasis'],
-	[3157, 'Stasis'],
-	// Starter Support
-	[3867, 'Starter Support'],
-	[3877, 'Starter Support'],
-	[3869, 'Starter Support'],
-	[3870, 'Starter Support'],
-	[3871, 'Starter Support'],
-	[3876, 'Starter Support'],
-	// Fatality
-	[3035, 'Fatality'],
-	[3071, 'Fatality'],
-	[3036, 'Fatality'],
-	[3033, 'Fatality'],
-	[6694, 'Fatality'],
-	[3302, 'Fatality'],
-	// Lifeline
-	[3003, 'Lifeline'],
-	[3155, 'Lifeline'],
-	[6673, 'Lifeline'],
-	[3156, 'Lifeline'],
-	[3040, 'Lifeline'],
-	[3053, 'Lifeline'],
-	// Eternity
-	[3803, 'Eternity'],
-	[6657, 'Eternity'],
-	// Quicksilver
-	[3139, 'Quicksilver'],
-	[3140, 'Quicksilver'],
-]);
 
 function itemRank(item: ItemRaw): string[] {
 	const rank = item.rank;
@@ -136,7 +85,7 @@ function handleRouteError(e: unknown): Response {
 			: 500;
 	const message = e instanceof Error ? e.message : String(e);
 	const payload = { statusCode, message };
-	console.log(payload);
+	// console.log(payload);
 	return new Response(JSON.stringify(payload), {
 		status: statusCode,
 		headers: { 'content-type': 'application/json' },
@@ -145,7 +94,7 @@ function handleRouteError(e: unknown): Response {
 
 const app = new Hono<{ Bindings: Env }>();
 
-const MERAKI_API_URL = 'https://cdn.merakianalytics.com/riot/lol/resources/latest/en-US';
+const MERAKI_API_URL = process.env.MERAKI_API_URL;
 
 function slimChampion(raw: ChampionRaw): ChampionSlim {
 	return {
@@ -182,6 +131,7 @@ app.get('/', (c: any) => {
 	return c.json({
 		env: c.env.APP_ENV,
 		// corsAllowedOrigins: c.env.CORS_ALLOWED_ORIGINS,
+		// merakiApiUrl: c.env.MERAKI_API_URL,
 	});
 });
 
@@ -226,6 +176,23 @@ app.get('/items', async (c) => {
 		const data = (await response.json()) as Record<string, ItemRaw>;
 		const list = modifyItems(Object.values(data));
 		return c.json(list);
+	} catch (e) {
+		return handleRouteError(e);
+	}
+});
+
+// Get skills (CommunityDragon bin + Data Dragon)
+app.get('/skills/:id', async (c) => {
+	try {
+		const id = c.req.param('id');
+		const version = c.req.query('version') ?? VERSION;
+		const lang = c.req.query('lang') ?? 'en_US';
+
+		const skills = await fetchChampionSkills(id, version, lang);
+		// const skillQ = skills[0];
+		// const desc = parseSkillDescription(skillQ, { level: 1, ad: 70, ap: 0 });
+		// return c.json(desc);
+		return c.json(skills);
 	} catch (e) {
 		return handleRouteError(e);
 	}
