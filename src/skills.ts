@@ -1,4 +1,10 @@
 import type { ChampionSkill, DdragonSpell, SkillDataField, SkillFormulaPart } from './types';
+import {
+	DAMAGE_STAT_BY_ID,
+	DEFAULT_BONUS_HEALTH_DISPLAY_UNIT,
+	getFormulaProfile,
+	type FormulaProfile,
+} from './formulaProfiles';
 
 type BinJson = Record<string, unknown>;
 type BinSpellObject = {
@@ -31,17 +37,6 @@ type BinCalculation = Record<string, unknown> & {
 	mModifiedGameCalculation?: string;
 	mDisplayAsPercent?: boolean;
 	__type?: string;
-};
-
-const STAT_BY_ID: Record<number, string> = {
-	1: 'Health',
-	2: 'AD',
-	3: 'AP',
-	4: 'Armor',
-	5: 'MR',
-	6: 'AttackSpeed',
-	7: 'MovementSpeed',
-	12: 'MaxHealth',
 };
 
 const SKIP_PLACEHOLDERS = new Set(['spellmodifierdescriptionappend']);
@@ -142,6 +137,7 @@ function buildFormulaParts(
 	parts: unknown[] | undefined,
 	dataValues: Map<string, BinDataValue>,
 	maxRank: number,
+	profile: FormulaProfile,
 ): SkillFormulaPart[] {
 	if (!parts?.length) return [];
 	const result: SkillFormulaPart[] = [];
@@ -154,30 +150,46 @@ function buildFormulaParts(
 		if (type === 'NamedDataValueCalculationPart' && typeof p.mDataValue === 'string') {
 			const key = toDataKey(p.mDataValue);
 			const dv = dataValues.get(key);
-			result.push({
-				kind: 'base',
-				dataValue: key,
-				values: dv ? sliceRankValues(dv.values, maxRank) : undefined,
-			});
+			const values = dv ? sliceRankValues(dv.values, maxRank) : undefined;
+			if (profile === 'lifeSteal') {
+				result.push({ kind: 'flat_percent', dataValue: key, values });
+			} else if (profile === 'damage') {
+				result.push({ kind: 'base_damage', dataValue: key, values });
+			} else {
+				result.push({ kind: 'flat_percent', dataValue: key, values });
+			}
 			continue;
 		}
 
 		if (type === 'StatByNamedDataValueCalculationPart' && typeof p.mDataValue === 'string') {
 			const key = toDataKey(p.mDataValue);
 			const dv = dataValues.get(key);
-			const stat = typeof p.mStat === 'number' ? STAT_BY_ID[p.mStat] ?? `Stat${p.mStat}` : undefined;
+			const values = dv ? sliceRankValues(dv.values, maxRank) : undefined;
+
+			if (profile === 'lifeSteal') {
+				result.push({
+					kind: 'per_bonus_health',
+					dataValue: key,
+					values,
+					displayUnit: DEFAULT_BONUS_HEALTH_DISPLAY_UNIT,
+				});
+				continue;
+			}
+
+			const stat =
+				typeof p.mStat === 'number' ? DAMAGE_STAT_BY_ID[p.mStat] : undefined;
 			result.push({
-				kind: 'ratio',
+				kind: profile === 'damage' ? 'ratio_damage' : 'flat_percent',
 				dataValue: key,
 				stat,
-				values: dv ? sliceRankValues(dv.values, maxRank) : undefined,
+				values,
 			});
 			continue;
 		}
 
 		if (type === 'StatByCoefficientCalculationPart') {
 			result.push({
-				kind: 'coefficient',
+				kind: 'ratio_damage',
 				stat: 'AP',
 				coefficient: typeof p.mCoefficient === 'number' ? roundValue(p.mCoefficient) : undefined,
 			});
@@ -257,6 +269,7 @@ function buildCalculationField(
 	type?: string,
 	displayMultiplier?: number,
 ): SkillDataField {
+	const profile = getFormulaProfile(type);
 	const isModified = calc.__type === 'GameCalculationModified' || calc.mModifiedGameCalculation;
 
 	if (isModified) {
@@ -266,6 +279,7 @@ function buildCalculationField(
 				: undefined;
 		return {
 			type,
+			formulaProfile: profile,
 			calculation: 'mMultiplier',
 			baseCalculation: baseKey,
 			multiplier: resolveMultiplier(calc.mMultiplier, dataValues, maxRank),
@@ -276,14 +290,17 @@ function buildCalculationField(
 	}
 
 	const scalarMultiplier =
-		calc.mMultiplier && typeof calc.mMultiplier === 'object'
+		profile !== 'lifeSteal' &&
+		calc.mMultiplier &&
+		typeof calc.mMultiplier === 'object'
 			? (calc.mMultiplier as Record<string, unknown>).mNumber
 			: undefined;
 
 	return {
 		type,
+		formulaProfile: profile,
 		calculation: 'mFormulaParts',
-		parts: buildFormulaParts(calc.mFormulaParts, dataValues, maxRank),
+		parts: buildFormulaParts(calc.mFormulaParts, dataValues, maxRank, profile),
 		displayMultiplier,
 		displayAsPercent: calc.mDisplayAsPercent === true,
 		scalarMultiplier: typeof scalarMultiplier === 'number' ? roundValue(scalarMultiplier) : undefined,
@@ -401,11 +418,11 @@ export async function fetchChampionSkills(
 	lang: string,
 ): Promise<ChampionSkill[]> {
 	const slug = championId.toLowerCase();
-	const ddragonName = capitalizeChampionId(slug);
+	// const ddragonName = capitalizeChampionId(slug);
 
 	const [binRes, ddragonRes] = await Promise.all([
 		fetch(`https://raw.communitydragon.org/latest/game/data/characters/${slug}/${slug}.bin.json`),
-		fetch(`https://ddragon.leagueoflegends.com/cdn/${version}/data/${lang}/champion/${ddragonName}.json`),
+		fetch(`https://ddragon.leagueoflegends.com/cdn/${version}/data/${lang}/champion/${championId}.json`),
 	]);
 
 	if (!binRes.ok) {
@@ -431,7 +448,7 @@ export async function fetchChampionSkills(
 	const championData = ddragon.data ?? {};
 	const championKey =
 		Object.keys(championData).find((k) => k.toLowerCase() === slug) ??
-		(championData[ddragonName] ? ddragonName : undefined);
+		(championData[championId] ? championId : undefined);
 	const champion = championKey ? championData[championKey] : undefined;
 	if (!champion?.spells?.length) {
 		throw new Error(`No spells found for champion "${championId}"`);

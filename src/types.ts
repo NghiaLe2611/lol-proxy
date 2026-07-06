@@ -1,3 +1,5 @@
+import type { FormulaProfile } from './formulaProfiles';
+
 export type ChampionRaw = Record<string, unknown>;
 
 export type ChampionSlim = {
@@ -30,16 +32,25 @@ export type DdragonSpell = {
 };
 
 export type SkillFormulaPart = {
-	kind: 'base' | 'ratio' | 'coefficient' | 'interpolation';
+	kind:
+		| 'base_damage'
+		| 'ratio_damage'
+		| 'flat_percent'
+		| 'per_bonus_health'
+		| 'coefficient'
+		| 'interpolation';
 	dataValue?: string;
 	stat?: string;
 	coefficient?: number;
 	values?: number[];
+	/** Display bucket for per_bonus_health, e.g. 100 → "per 100 bonus health" */
+	displayUnit?: number;
 };
 
 export type SkillDataField = {
 	values?: number[];
 	type?: string;
+	formulaProfile?: FormulaProfile;
 	calculation?: 'mFormulaParts' | 'mMultiplier';
 	parts?: SkillFormulaPart[];
 	baseCalculation?: string;
@@ -66,11 +77,18 @@ export type SkillDescriptionContext = {
 	ap: number;
 	/** Champion level for interpolation formulas (default 18) */
 	championLevel?: number;
+	/** Bonus health for lifeSteal formulas (omit → show rate per 100 bonus HP) */
+	bonusHealth?: number;
 };
 
 export type SkillValueBreakdown = {
-	base?: number;
+	baseDamage?: number;
 	ratios?: { stat: string; ratio: number; amount: number }[];
+	flatPercent?: number;
+	perBonusHealthRate?: number;
+	perBonusHealthUnit?: number;
+	bonusHealth?: number;
+	bonusPercent?: number;
 };
 
 export type SkillSegmentRole =

@@ -1,3 +1,4 @@
+import { DEFAULT_BONUS_HEALTH_DISPLAY_UNIT } from './formulaProfiles';
 import type {
 	ChampionSkill,
 	ParsedSkillDescription,
@@ -17,7 +18,7 @@ type ComputedField = {
 const SKIP_PLACEHOLDERS = new Set(['spellmodifierdescriptionappend']);
 
 function roundDisplay(value: number): number {
-	return Math.round(value);
+	return Math.round(value * 10) / 10;
 }
 
 function clampLevel(level: number, maxRank: number): number {
@@ -68,13 +69,13 @@ function statValue(stat: string | undefined, ctx: SkillDescriptionContext): numb
 
 function formatPercent(ratio: number): string {
 	const pct = Math.round(ratio * 1000) / 10;
-	return Number.isInteger(pct) ? `${pct}%` : `${pct}%`;
+	return `${pct}%`;
 }
 
-function formatFormula(breakdown: SkillValueBreakdown): string {
+function formatDamageFormula(breakdown: SkillValueBreakdown): string {
 	const chunks: string[] = [];
-	if (breakdown.base !== undefined && breakdown.base !== 0) {
-		chunks.push(String(roundDisplay(breakdown.base)));
+	if (breakdown.baseDamage !== undefined && breakdown.baseDamage !== 0) {
+		chunks.push(String(Math.round(breakdown.baseDamage)));
 	}
 	for (const r of breakdown.ratios ?? []) {
 		if (r.ratio === 0) continue;
@@ -83,13 +84,28 @@ function formatFormula(breakdown: SkillValueBreakdown): string {
 	return chunks.length > 0 ? chunks.join(' + ') : '0';
 }
 
+function formatLifeStealFormula(breakdown: SkillValueBreakdown): string {
+	const flat = breakdown.flatPercent ?? 0;
+	const rate = breakdown.perBonusHealthRate ?? 0;
+	const unit = breakdown.perBonusHealthUnit ?? DEFAULT_BONUS_HEALTH_DISPLAY_UNIT;
+	const bonusHealth = breakdown.bonusHealth ?? 0;
+	const bonusPercent = breakdown.bonusPercent ?? rate * bonusHealth;
+	const total = flat + bonusPercent;
+
+	if (bonusHealth > 0) {
+		return `${formatPercent(total)} (+${formatPercent(bonusPercent)} per ${bonusHealth} bonus health)`;
+	}
+
+	return `${formatPercent(flat)} (+${formatPercent(rate * unit)} per ${unit} bonus health)`;
+}
+
 function interpolateValue(part: { values?: number[] }, championLevel: number): number {
 	const [start = 0, end = 0] = part.values ?? [];
 	const t = Math.min(Math.max((championLevel - 1) / 17, 0), 1);
 	return start + (end - start) * t;
 }
 
-function computeFormulaParts(
+function computeDamageFormula(
 	field: SkillDataField,
 	ctx: SkillDescriptionContext,
 	idx: number,
@@ -99,24 +115,15 @@ function computeFormulaParts(
 	const championLevel = ctx.championLevel ?? 18;
 
 	for (const part of field.parts ?? []) {
-		if (part.kind === 'base') {
+		if (part.kind === 'base_damage') {
 			const base = part.values?.[idx] ?? 0;
-			breakdown.base = (breakdown.base ?? 0) + base;
+			breakdown.baseDamage = (breakdown.baseDamage ?? 0) + base;
 			total += base;
 			continue;
 		}
 
-		if (part.kind === 'ratio') {
-			const ratio = part.values?.[idx] ?? 0;
-			const stat = part.stat ?? 'AD';
-			const amount = statValue(stat, ctx) * ratio;
-			breakdown.ratios!.push({ stat, ratio, amount });
-			total += amount;
-			continue;
-		}
-
-		if (part.kind === 'coefficient') {
-			const ratio = part.coefficient ?? 0;
+		if (part.kind === 'ratio_damage' || part.kind === 'coefficient') {
+			const ratio = part.values?.[idx] ?? part.coefficient ?? 0;
 			const stat = part.stat ?? 'AP';
 			const amount = statValue(stat, ctx) * ratio;
 			breakdown.ratios!.push({ stat, ratio, amount });
@@ -126,14 +133,14 @@ function computeFormulaParts(
 
 		if (part.kind === 'interpolation') {
 			const value = interpolateValue(part, championLevel);
-			breakdown.base = (breakdown.base ?? 0) + value;
+			breakdown.baseDamage = (breakdown.baseDamage ?? 0) + value;
 			total += value;
 		}
 	}
 
 	if (field.scalarMultiplier !== undefined) {
 		total *= field.scalarMultiplier;
-		if (breakdown.base !== undefined) breakdown.base *= field.scalarMultiplier;
+		if (breakdown.baseDamage !== undefined) breakdown.baseDamage *= field.scalarMultiplier;
 		for (const r of breakdown.ratios ?? []) {
 			r.amount *= field.scalarMultiplier;
 			r.ratio *= field.scalarMultiplier;
@@ -141,20 +148,63 @@ function computeFormulaParts(
 	}
 
 	return {
+		total: Math.round(total),
+		formula: formatDamageFormula(breakdown),
+		breakdown,
+	};
+}
+
+function computeLifeStealFormula(
+	field: SkillDataField,
+	ctx: SkillDescriptionContext,
+	idx: number,
+): ComputedField {
+	let flat = 0;
+	let rate = 0;
+	let displayUnit = DEFAULT_BONUS_HEALTH_DISPLAY_UNIT;
+
+	for (const part of field.parts ?? []) {
+		if (part.kind === 'flat_percent') {
+			flat = part.values?.[idx] ?? 0;
+		}
+		if (part.kind === 'per_bonus_health') {
+			rate = part.values?.[idx] ?? 0;
+			displayUnit = part.displayUnit ?? DEFAULT_BONUS_HEALTH_DISPLAY_UNIT;
+		}
+	}
+
+	const bonusHealth = ctx.bonusHealth ?? 0;
+	const bonusPercent = rate * bonusHealth;
+	const total = flat + bonusPercent;
+
+	const breakdown: SkillValueBreakdown = {
+		flatPercent: flat,
+		perBonusHealthRate: rate,
+		perBonusHealthUnit: displayUnit,
+		...(bonusHealth > 0 ? { bonusHealth, bonusPercent } : {}),
+	};
+
+	return {
 		total: roundDisplay(total),
-		formula: formatFormula(breakdown),
+		formula: formatLifeStealFormula(breakdown),
 		breakdown,
 	};
 }
 
 function scaleBreakdown(breakdown: SkillValueBreakdown, factor: number): SkillValueBreakdown {
 	return {
-		base: breakdown.base !== undefined ? breakdown.base * factor : undefined,
+		baseDamage: breakdown.baseDamage !== undefined ? breakdown.baseDamage * factor : undefined,
 		ratios: breakdown.ratios?.map((r) => ({
 			stat: r.stat,
 			ratio: r.ratio * factor,
 			amount: r.amount * factor,
 		})),
+		flatPercent: breakdown.flatPercent !== undefined ? breakdown.flatPercent * factor : undefined,
+		perBonusHealthRate:
+			breakdown.perBonusHealthRate !== undefined ? breakdown.perBonusHealthRate * factor : undefined,
+		perBonusHealthUnit: breakdown.perBonusHealthUnit,
+		bonusHealth: breakdown.bonusHealth,
+		bonusPercent: breakdown.bonusPercent !== undefined ? breakdown.bonusPercent * factor : undefined,
 	};
 }
 
@@ -178,16 +228,17 @@ function computeMultiplierField(
 		const factor = 1 + mult;
 		const scaled = scaleBreakdown(base.breakdown ?? {}, factor);
 		return {
-			total: roundDisplay(base.total * factor),
-			formula: formatFormula(scaled),
+			total: Math.round(base.total * factor),
+			formula: formatDamageFormula(scaled),
 			breakdown: scaled,
 		};
 	}
 
+	const scaled = scaleBreakdown(base.breakdown ?? {}, mult);
 	return {
-		total: roundDisplay(base.total * mult),
-		formula: formatFormula(scaleBreakdown(base.breakdown ?? {}, mult)),
-		breakdown: scaleBreakdown(base.breakdown ?? {}, mult),
+		total: Math.round(base.total * mult),
+		formula: formatDamageFormula(scaled),
+		breakdown: scaled,
 	};
 }
 
@@ -201,9 +252,9 @@ function computeDataValue(
 		value *= exprMultiplier;
 	}
 	const display = field.displayAsPercent || Math.abs(exprMultiplier ?? 1) === 100;
-	const formula = display ? formatPercent(Math.abs(value)) : String(roundDisplay(value));
+	const formula = display ? formatPercent(Math.abs(value)) : String(Math.round(Math.abs(value)));
 	return {
-		total: roundDisplay(Math.abs(value)),
+		total: Math.round(Math.abs(value)),
 		formula,
 	};
 }
@@ -230,7 +281,11 @@ function computeField(
 	let result: ComputedField;
 
 	if (field.calculation === 'mFormulaParts') {
-		result = computeFormulaParts(field, ctx, idx);
+		if (field.formulaProfile === 'lifeSteal') {
+			result = computeLifeStealFormula(field, ctx, idx);
+		} else {
+			result = computeDamageFormula(field, ctx, idx);
+		}
 	} else if (field.calculation === 'mMultiplier') {
 		result = computeMultiplierField(field, skill, ctx, idx, cache);
 	} else if (field.values) {
@@ -243,29 +298,28 @@ function computeField(
 	return result;
 }
 
-function hasFormulaBreakdown(breakdown?: SkillValueBreakdown): boolean {
+function hasDamageFormulaBreakdown(breakdown?: SkillValueBreakdown): boolean {
 	if (!breakdown) return false;
 	return (
 		(breakdown.ratios?.length ?? 0) > 0 ||
-		(breakdown.base !== undefined && (breakdown.ratios?.some((r) => r.ratio !== 0) ?? false))
+		(breakdown.baseDamage !== undefined && (breakdown.ratios?.some((r) => r.ratio !== 0) ?? false))
 	);
 }
 
-/** Expand computed value into color-friendly leaf segments. */
-function buildValueSegments(
+function hasLifeStealBreakdown(breakdown?: SkillValueBreakdown): boolean {
+	return breakdown?.flatPercent !== undefined && breakdown?.perBonusHealthRate !== undefined;
+}
+
+function buildDamageValueSegments(
 	computed: ComputedField,
 	key: string,
 	style?: string,
 ): SkillDescriptionSegment[] {
-	const contentRole: SkillSegmentRole = style ? tagToRole(style) : 'literal';
+	const contentRole: SkillSegmentRole = style ? tagToRole(style) : 'damage';
 	const breakdown = computed.breakdown;
 
-	if (!hasFormulaBreakdown(breakdown)) {
-		const role: SkillSegmentRole =
-			style && (contentRole === 'damage' || contentRole === 'scale' || contentRole === 'speed' || contentRole === 'healing')
-				? contentRole
-				: 'literal';
-		return [{ kind: 'number', value: computed.total, role, style, key }];
+	if (!hasDamageFormulaBreakdown(breakdown)) {
+		return [{ kind: 'number', value: computed.total, role: contentRole, style, key }];
 	}
 
 	const segments: SkillDescriptionSegment[] = [
@@ -274,10 +328,10 @@ function buildValueSegments(
 	];
 
 	const formulaParts: SkillDescriptionSegment[] = [];
-	if (breakdown!.base !== undefined && breakdown!.base !== 0) {
+	if (breakdown!.baseDamage !== undefined && breakdown!.baseDamage !== 0) {
 		formulaParts.push({
 			kind: 'number',
-			value: roundDisplay(breakdown!.base),
+			value: Math.round(breakdown!.baseDamage),
 			role: contentRole,
 			style,
 			key,
@@ -302,6 +356,81 @@ function buildValueSegments(
 	segments.push(...formulaParts);
 	segments.push({ kind: 'text', text: ')', role: 'literal' });
 	return segments;
+}
+
+function buildLifeStealValueSegments(
+	computed: ComputedField,
+	key: string,
+	style?: string,
+): SkillDescriptionSegment[] {
+	const contentRole: SkillSegmentRole = 'healing';
+	const b = computed.breakdown;
+	if (!b || !hasLifeStealBreakdown(b)) {
+		return [{ kind: 'number', value: computed.total, role: contentRole, style, key }];
+	}
+
+	const flat = b.flatPercent ?? 0;
+	const rate = b.perBonusHealthRate ?? 0;
+	const unit = b.perBonusHealthUnit ?? DEFAULT_BONUS_HEALTH_DISPLAY_UNIT;
+	const bonusHealth = b.bonusHealth ?? 0;
+	const bonusPercent = b.bonusPercent ?? rate * bonusHealth;
+	const total = roundDisplay(flat + bonusPercent);
+
+	const segments: SkillDescriptionSegment[] = [
+		{ kind: 'number', value: total, role: contentRole, style: style ?? 'lifeSteal', key },
+		{ kind: 'text', text: ' (+', role: 'literal' },
+	];
+
+	if (bonusHealth > 0) {
+		segments.push({
+			kind: 'number',
+			value: roundDisplay(bonusPercent),
+			role: contentRole,
+			style: style ?? 'lifeSteal',
+			key,
+		});
+		segments.push({
+			kind: 'text',
+			text: `% per ${bonusHealth} bonus health)`,
+			role: 'literal',
+		});
+	} else {
+		segments.push({
+			kind: 'number',
+			value: roundDisplay(rate * unit),
+			role: contentRole,
+			style: style ?? 'lifeSteal',
+			key,
+		});
+		segments.push({
+			kind: 'text',
+			text: `% per ${unit} bonus health)`,
+			role: 'literal',
+		});
+	}
+
+	return segments;
+}
+
+function buildValueSegments(
+	computed: ComputedField,
+	field: SkillDataField | undefined,
+	key: string,
+	style?: string,
+): SkillDescriptionSegment[] {
+	if (field?.formulaProfile === 'lifeSteal') {
+		return buildLifeStealValueSegments(computed, key, style);
+	}
+	if (field?.formulaProfile === 'damage') {
+		return buildDamageValueSegments(computed, key, style);
+	}
+
+	const contentRole: SkillSegmentRole = style ? tagToRole(style) : 'literal';
+	if (hasDamageFormulaBreakdown(computed.breakdown)) {
+		return buildDamageValueSegments(computed, key, style);
+	}
+
+	return [{ kind: 'number', value: computed.total, role: contentRole, style, key }];
 }
 
 function parsePlaceholderExpr(expr: string): { key: string; displayMultiplier?: number } {
@@ -358,7 +487,7 @@ function parseInline(
 			computed = { total: 0, formula: '0' };
 		}
 
-		segments.push(...buildValueSegments(computed, key, style ?? field?.type));
+		segments.push(...buildValueSegments(computed, field, key, style ?? field?.type));
 		lastIndex = match.index + match[0].length;
 	}
 
@@ -421,7 +550,7 @@ function segmentsToText(segments: SkillDescriptionSegment[]): string {
 	return segments.map(segmentToText).join('');
 }
 
-/** Build dynamic tooltip segments for UI rendering. Use `role` + `style` to map colors. */
+/** Build dynamic tooltip segments for UI rendering. Use `role` + `style` + `formulaProfile` to map colors. */
 export function parseSkillDescription(
 	skill: ChampionSkill,
 	ctx: SkillDescriptionContext,
