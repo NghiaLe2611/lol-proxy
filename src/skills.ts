@@ -28,7 +28,7 @@ type BinSpellResource = Record<string, unknown> & {
 
 type BinDataValue = {
 	name: string;
-	values: number[];
+	values?: number[];
 };
 
 type BinCalculation = Record<string, unknown> & {
@@ -55,8 +55,13 @@ function roundValue(value: number): number {
 	return Math.round(value * 1000) / 1000;
 }
 
-function sliceRankValues(values: number[], maxRank: number): number[] {
+function sliceRankValues(values: number[] | undefined, maxRank: number): number[] {
+	if (!Array.isArray(values) || values.length === 0) return [];
 	return values.slice(1, maxRank + 1).map(roundValue);
+}
+
+function hasRankValues(values: unknown): values is number[] {
+	return Array.isArray(values) && values.length > 0;
 }
 
 function indexBinSpells(bin: BinJson): Map<string, BinSpellObject> {
@@ -74,7 +79,7 @@ function getDataValueMap(spell: BinSpellResource | undefined): Map<string, BinDa
 	const map = new Map<string, BinDataValue>();
 	if (!spell?.DataValues) return map;
 	for (const dv of spell.DataValues) {
-		if (dv?.name) map.set(toDataKey(dv.name), dv);
+		if (dv?.name && hasRankValues(dv.values)) map.set(toDataKey(dv.name), dv);
 	}
 	return map;
 }
@@ -328,20 +333,20 @@ function addBinScalars(
 	ddragonSpell: DdragonSpell,
 	maxRank: number,
 ) {
-	if (spell?.cooldownTime?.length) {
+	if (Array.isArray(spell?.cooldownTime) && spell.cooldownTime.length > 0) {
 		data.cooldown = sliceRankValues(spell.cooldownTime, maxRank);
 	} else if (ddragonSpell.cooldown?.length) {
 		data.cooldown = ddragonSpell.cooldown.map(roundValue);
 	}
 
-	if (spell?.mana?.length) {
+	if (Array.isArray(spell?.mana) && spell.mana.length > 0) {
 		data.cost = sliceRankValues(spell.mana, maxRank);
 	} else if (ddragonSpell.cost?.length) {
 		data.cost = ddragonSpell.cost.map(roundValue);
 	}
 
 	const rangeSource = spell?.castRangeDisplayOverride ?? spell?.castRange;
-	if (rangeSource?.length) {
+	if (Array.isArray(rangeSource) && rangeSource.length > 0) {
 		data.range = sliceRankValues(rangeSource, maxRank);
 	} else if (ddragonSpell.range?.length) {
 		data.range = ddragonSpell.range.map(roundValue);
@@ -350,7 +355,9 @@ function addBinScalars(
 	if (typeof spell?.mCastTime === 'number') data.castTime = roundValue(spell.mCastTime);
 	if (typeof spell?.mLineWidth === 'number') data.width = roundValue(spell.mLineWidth);
 	if (typeof spell?.missileSpeed === 'number') data.speed = roundValue(spell.missileSpeed);
-	if (spell?.castRadius?.length) data.effectRadius = sliceRankValues(spell.castRadius, maxRank);
+	if (Array.isArray(spell?.castRadius) && spell.castRadius.length > 0) {
+		data.effectRadius = sliceRankValues(spell.castRadius, maxRank);
+	}
 }
 
 function buildSkillFromSources(
@@ -391,14 +398,14 @@ function buildSkillFromSources(
 		}
 
 		const dv = dataValues.get(key);
-		if (dv) {
+		if (dv && hasRankValues(dv.values)) {
 			data[key] = buildDataValueField(dv, maxRank, type, displayMultiplier);
 			usedKeys.add(key);
 		}
 	}
 
 	for (const [key, dv] of dataValues) {
-		if (usedKeys.has(key)) continue;
+		if (usedKeys.has(key) || !hasRankValues(dv.values)) continue;
 		data[key] = buildDataValueField(dv, maxRank);
 	}
 
@@ -457,4 +464,13 @@ export async function fetchChampionSkills(
 	const binSpells = indexBinSpells(bin);
 
 	return champion.spells.map((spell) => buildSkillFromSources(spell, binSpells.get(spell.id)));
+}
+
+/** @internal Exported for tests using local bin.json fixtures. */
+export function buildChampionSkillsFromBin(
+	bin: BinJson,
+	spells: DdragonSpell[],
+): ChampionSkill[] {
+	const binSpells = indexBinSpells(bin);
+	return spells.map((spell) => buildSkillFromSources(spell, binSpells.get(spell.id)));
 }
