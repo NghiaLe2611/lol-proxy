@@ -1,0 +1,782 @@
+{
+  "champion": "Aatrox",
+  "skills": {
+    "Q": {
+      "key": "Characters/Aatrox/Spells/AatroxQAbility/AatroxQ",
+      "name": "AatroxQ",
+      "data_values": {
+        "QBaseDamage": [
+          -5.0,
+          10.0,
+          25.0,
+          40.0,
+          55.0,
+          70.0,
+          85.0
+        ],
+        "QTotalADRatio": [
+          0.5249999761581421,
+          0.6000000238418579,
+          0.675000011920929,
+          0.75,
+          0.824999988079071,
+          0.8999999761581421,
+          0.9750000238418579
+        ],
+        "QSweetSpotBonus": [
+          0.75,
+          0.75,
+          0.75,
+          0.75,
+          0.75,
+          0.75,
+          0.75
+        ],
+        "QKnockupDuration": [
+          0.25,
+          0.25,
+          0.25,
+          0.25,
+          0.25,
+          0.25,
+          0.25
+        ],
+        "QRampBonus": [
+          0.25,
+          0.25,
+          0.25,
+          0.25,
+          0.25,
+          0.25,
+          0.25
+        ],
+        "QMonsterBonus": [
+          25.0,
+          25.0,
+          25.0,
+          25.0,
+          25.0,
+          25.0,
+          25.0
+        ],
+        "QExtensionTime": [
+          4.0,
+          4.0,
+          4.0,
+          4.0,
+          4.0,
+          4.0,
+          4.0
+        ]
+      },
+      "calculations": {
+        "QDamage": [
+          {
+            "type": "base_damage",
+            "data_value": "QBaseDamage",
+            "values": [
+              -5.0,
+              10.0,
+              25.0,
+              40.0,
+              55.0,
+              70.0,
+              85.0
+            ]
+          },
+          {
+            "type": "ratio_damage_dynamic",
+            "stat": "AD",
+            "data_value": "QTotalADRatio",
+            "values": [
+              0.5249999761581421,
+              0.6000000238418579,
+              0.675000011920929,
+              0.75,
+              0.824999988079071,
+              0.8999999761581421,
+              0.9750000238418579
+            ]
+          }
+        ],
+        "QMinionDamage": [
+          {
+            "type": "level_scaling",
+            "raw": {
+              "mLevel1Value": 0.550000011920929,
+              "mBreakpoints": [
+                {
+                  "mLevel": 6,
+                  "mAdditionalBonusAtThisLevel": 0.05000000074505806,
+                  "__type": "Breakpoint"
+                },
+                {
+                  "mLevel": 11,
+                  "mAdditionalBonusAtThisLevel": 0.05000000074505806,
+                  "__type": "Breakpoint"
+                },
+                {
+                  "mLevel": 16,
+                  "mAdditionalBonusAtThisLevel": 0.05000000074505806,
+                  "__type": "Breakpoint"
+                },
+                {
+                  "mLevel": 21,
+                  "mAdditionalBonusAtThisLevel": 0.05000000074505806,
+                  "__type": "Breakpoint"
+                },
+                {
+                  "mLevel": 26,
+                  "mAdditionalBonusAtThisLevel": 0.05000000074505806,
+                  "__type": "Breakpoint"
+                }
+              ],
+              "__type": "ByCharLevelBreakpointsCalculationPart"
+            }
+          }
+        ],
+        "QEdgeDamage": {
+          "type": "modified",
+          "base": "QDamage",
+          "multiplier_data_value": "QSweetSpotBonus"
+        }
+      },
+      "cooldown": [
+        14.0,
+        14.0,
+        12.0,
+        10.0,
+        8.0,
+        6.0,
+        4.0
+      ],
+      "mana": [],
+      "cast_range": [
+        25000.0,
+        25000.0,
+        25000.0,
+        25000.0,
+        25000.0,
+        25000.0,
+        25000.0
+      ],
+      "effect_amounts": [],
+      "children": [
+        {
+          "key": "Characters/Aatrox/Spells/AatroxQAbility/AatroxQ2",
+          "name": "AatroxQ2",
+          "data_values": {},
+          "calculations": {},
+          "cooldown": [
+            16.0,
+            16.0,
+            15.0,
+            14.0,
+            13.0,
+            12.0,
+            12.0
+          ],
+          "mana": [],
+          "cast_range": [
+            25000.0,
+            25000.0,
+            25000.0,
+            25000.0,
+            25000.0,
+            25000.0,
+            25000.0
+          ],
+          "effect_amounts": [
+            [
+              5.0,
+              5.0,
+              10.0,
+              15.0,
+              20.0,
+              25.0,
+              0.0
+            ],
+            [
+              0.8500000238418579,
+              0.8500000238418579,
+              0.9750000238418579,
+              1.100000023841858,
+              1.125,
+              1.350000023841858,
+              0.0
+            ]
+          ],
+          "children": []
+        },
+        {
+          "key": "Characters/Aatrox/Spells/AatroxQAbility/AatroxQ3",
+          "name": "AatroxQ3",
+          "data_values": {},
+          "calculations": {},
+          "cooldown": [
+            16.0,
+            16.0,
+            15.0,
+            14.0,
+            13.0,
+            12.0,
+            12.0
+          ],
+          "mana": [],
+          "cast_range": [
+            25000.0,
+            25000.0,
+            25000.0,
+            25000.0,
+            25000.0,
+            25000.0,
+            25000.0
+          ],
+          "effect_amounts": [
+            [
+              5.0,
+              5.0,
+              10.0,
+              15.0,
+              20.0,
+              25.0,
+              0.0
+            ],
+            [
+              0.8500000238418579,
+              0.8500000238418579,
+              0.9750000238418579,
+              1.100000023841858,
+              1.125,
+              1.350000023841858,
+              0.0
+            ]
+          ],
+          "children": []
+        },
+        {
+          "key": "Characters/Aatrox/Spells/AatroxQAbility/AatroxQWrapperCast",
+          "name": "AatroxQWrapperCast",
+          "data_values": {},
+          "calculations": {},
+          "cooldown": [],
+          "mana": [],
+          "cast_range": [],
+          "effect_amounts": [],
+          "children": []
+        }
+      ],
+      "slot": "Q"
+    },
+    "W": {
+      "key": "Characters/Aatrox/Spells/AatroxWAbility/AatroxW",
+      "name": "AatroxW",
+      "data_values": {
+        "WBaseDamage": [
+          20.0,
+          30.0,
+          40.0,
+          50.0,
+          60.0,
+          70.0,
+          80.0
+        ],
+        "WBonusADRatio": [
+          0.4000000059604645,
+          0.4000000059604645,
+          0.4000000059604645,
+          0.4000000059604645,
+          0.4000000059604645,
+          0.4000000059604645,
+          0.4000000059604645
+        ],
+        "WSlowPercentage": [
+          -0.25,
+          -0.25,
+          -0.2750000059604645,
+          -0.30000001192092896,
+          -0.32499998807907104,
+          -0.3499999940395355,
+          -0.3499999940395355
+        ],
+        "WSlowDuration": [
+          1.5,
+          1.5,
+          1.5,
+          1.5,
+          1.5,
+          1.5,
+          1.5
+        ],
+        "WTotalADRatio": [
+          0.4000000059604645,
+          0.4000000059604645,
+          0.4000000059604645,
+          0.4000000059604645,
+          0.4000000059604645,
+          0.4000000059604645,
+          0.4000000059604645
+        ]
+      },
+      "calculations": {
+        "WDamage": [
+          {
+            "type": "base_damage",
+            "data_value": "WBaseDamage",
+            "values": [
+              20.0,
+              30.0,
+              40.0,
+              50.0,
+              60.0,
+              70.0,
+              80.0
+            ]
+          },
+          {
+            "type": "ratio_damage_dynamic",
+            "stat": "AD",
+            "data_value": "WTotalADRatio",
+            "values": [
+              0.4000000059604645,
+              0.4000000059604645,
+              0.4000000059604645,
+              0.4000000059604645,
+              0.4000000059604645,
+              0.4000000059604645,
+              0.4000000059604645
+            ]
+          }
+        ]
+      },
+      "cooldown": [
+        20.0,
+        20.0,
+        18.0,
+        16.0,
+        14.0,
+        12.0,
+        12.0
+      ],
+      "mana": [],
+      "cast_range": [
+        825.0,
+        825.0,
+        825.0,
+        825.0,
+        825.0,
+        825.0,
+        825.0
+      ],
+      "effect_amounts": [],
+      "children": [
+        {
+          "key": "Characters/Aatrox/Spells/AatroxWAbility/AatroxWSlow",
+          "name": "AatroxWSlow",
+          "data_values": {},
+          "calculations": {},
+          "cooldown": [],
+          "mana": [],
+          "cast_range": [],
+          "effect_amounts": [],
+          "children": []
+        }
+      ],
+      "slot": "W"
+    },
+    "E": {
+      "key": "Characters/Aatrox/Spells/AatroxEAbility/AatroxE",
+      "name": "AatroxE",
+      "data_values": {
+        "ESpellVamp": [
+          16.0,
+          16.0,
+          16.0,
+          16.0,
+          16.0,
+          16.0,
+          16.0
+        ],
+        "EBonusAD": [
+          5.0,
+          15.0,
+          25.0,
+          35.0,
+          45.0,
+          55.0,
+          65.0
+        ],
+        "EResistancePerAD": [
+          5.0,
+          10.0,
+          15.0,
+          20.0,
+          25.0,
+          30.0,
+          35.0
+        ],
+        "EDashSpeed": [
+          800.0,
+          800.0,
+          800.0,
+          800.0,
+          800.0,
+          800.0,
+          800.0
+        ],
+        "EMaxRange": [
+          300.0,
+          300.0,
+          300.0,
+          300.0,
+          300.0,
+          300.0,
+          300.0
+        ],
+        "EDuration": [
+          1.5,
+          1.5,
+          1.5,
+          1.5,
+          1.5,
+          1.5,
+          1.5
+        ],
+        "EBaseRechargeTime": [
+          30.0,
+          26.0,
+          22.0,
+          18.0,
+          14.0,
+          10.0,
+          6.0
+        ],
+        "EMinRange": [
+          75.0,
+          75.0,
+          75.0,
+          75.0,
+          75.0,
+          75.0,
+          75.0
+        ],
+        "ESpellVampEmpowered": [
+          16.0,
+          16.0,
+          16.0,
+          16.0,
+          16.0,
+          16.0,
+          16.0
+        ],
+        "EVampHPRatio": [
+          0.010999999940395355,
+          0.010999999940395355,
+          0.010999999940395355,
+          0.010999999940395355,
+          0.010999999940395355,
+          0.010999999940395355,
+          0.010999999940395355
+        ]
+      },
+      "calculations": {
+        "TotalEVamp": [
+          {
+            "type": "base_damage",
+            "data_value": "ESpellVamp",
+            "values": [
+              16.0,
+              16.0,
+              16.0,
+              16.0,
+              16.0,
+              16.0,
+              16.0
+            ]
+          },
+          {
+            "type": "ratio_damage_dynamic",
+            "stat": "MaxHealth",
+            "data_value": "EVampHPRatio",
+            "values": [
+              0.010999999940395355,
+              0.010999999940395355,
+              0.010999999940395355,
+              0.010999999940395355,
+              0.010999999940395355,
+              0.010999999940395355,
+              0.010999999940395355
+            ]
+          }
+        ]
+      },
+      "cooldown": [
+        9.0,
+        9.0,
+        8.0,
+        7.0,
+        6.0,
+        5.0,
+        4.0
+      ],
+      "mana": [],
+      "cast_range": [
+        25000.0,
+        25000.0,
+        25000.0,
+        25000.0,
+        25000.0,
+        25000.0,
+        25000.0
+      ],
+      "effect_amounts": [],
+      "children": [
+        {
+          "key": "Characters/Aatrox/Spells/AatroxEAbility/AatroxEPassive",
+          "name": "AatroxEPassive",
+          "data_values": {},
+          "calculations": {},
+          "cooldown": [],
+          "mana": [],
+          "cast_range": [],
+          "effect_amounts": [],
+          "children": []
+        }
+      ],
+      "slot": "E"
+    },
+    "R": {
+      "key": "Characters/Aatrox/Spells/AatroxRAbility/AatroxR",
+      "name": "AatroxR",
+      "data_values": {
+        "RDuration": [
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0,
+          10.0
+        ],
+        "RERechargeBonus": [
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5
+        ],
+        "RMovementSpeed": [
+          0.10000000149011612,
+          0.15000000596046448,
+          0.20000000298023224,
+          0.25,
+          0.30000001192092896,
+          0.3499999940395355,
+          0.4000000059604645
+        ],
+        "RMovementSpeedBonus": [
+          0.4000000059604645,
+          0.6000000238418579,
+          0.800000011920929,
+          1.0,
+          1.2000000476837158,
+          1.399999976158142,
+          1.600000023841858
+        ],
+        "RTotalADAmp": [
+          0.10000000149011612,
+          0.20000000298023224,
+          0.30000001192092896,
+          0.4000000059604645,
+          0.5,
+          0.6000000238418579,
+          0.699999988079071
+        ],
+        "RBonusADRange": [
+          75.0,
+          75.0,
+          75.0,
+          75.0,
+          75.0,
+          75.0,
+          75.0
+        ],
+        "RSpeedMinDuration": [
+          3.0,
+          3.0,
+          3.0,
+          3.0,
+          3.0,
+          3.0,
+          3.0
+        ],
+        "RFXExtraDuration": [
+          0.6000000238418579,
+          0.6000000238418579,
+          0.6000000238418579,
+          0.6000000238418579,
+          0.6000000238418579,
+          0.6000000238418579,
+          0.6000000238418579
+        ],
+        "RPercentBloodWellToBoostToMax": [
+          0.800000011920929,
+          0.800000011920929,
+          0.800000011920929,
+          0.800000011920929,
+          0.800000011920929,
+          0.800000011920929,
+          0.800000011920929
+        ],
+        "RHealingAmp": [
+          0.25,
+          0.5,
+          0.75,
+          1.0,
+          1.25,
+          1.5,
+          1.75
+        ],
+        "RExtension": [
+          5.0,
+          5.0,
+          5.0,
+          5.0,
+          5.0,
+          5.0,
+          5.0
+        ],
+        "RFearRadius": [
+          600.0,
+          600.0,
+          600.0,
+          600.0,
+          600.0,
+          600.0,
+          600.0
+        ],
+        "RMinionFearDuration": [
+          3.0,
+          3.0,
+          3.0,
+          3.0,
+          3.0,
+          3.0,
+          3.0
+        ],
+        "RChampionFearDuration": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "calculations": {},
+      "cooldown": [
+        120.0,
+        120.0,
+        100.0,
+        80.0,
+        80.0,
+        80.0,
+        80.0
+      ],
+      "mana": [],
+      "cast_range": [
+        25000.0,
+        25000.0,
+        25000.0,
+        25000.0,
+        25000.0,
+        25000.0,
+        25000.0
+      ],
+      "effect_amounts": [],
+      "children": [
+        {
+          "key": "Characters/Aatrox/Spells/AatroxRAbility/AatroxRAttack1",
+          "name": "AatroxRAttack1",
+          "data_values": {},
+          "calculations": {},
+          "cooldown": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "mana": [],
+          "cast_range": [
+            200.0,
+            200.0,
+            200.0,
+            200.0,
+            200.0,
+            200.0,
+            200.0
+          ],
+          "effect_amounts": [],
+          "children": []
+        },
+        {
+          "key": "Characters/Aatrox/Spells/AatroxRAbility/AatroxRAttack2",
+          "name": "AatroxRAttack2",
+          "data_values": {},
+          "calculations": {},
+          "cooldown": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "mana": [],
+          "cast_range": [
+            200.0,
+            200.0,
+            200.0,
+            200.0,
+            200.0,
+            200.0,
+            200.0
+          ],
+          "effect_amounts": [],
+          "children": []
+        },
+        {
+          "key": "Characters/Aatrox/Spells/AatroxRAbility/AatroxRMovementSpeedManager",
+          "name": "AatroxRMovementSpeedManager",
+          "data_values": {},
+          "calculations": {},
+          "cooldown": [],
+          "mana": [],
+          "cast_range": [],
+          "effect_amounts": [],
+          "children": []
+        },
+        {
+          "key": "Characters/Aatrox/Spells/AatroxRAbility/AatroxRRevive",
+          "name": "AatroxRRevive",
+          "data_values": {},
+          "calculations": {},
+          "cooldown": [],
+          "mana": [],
+          "cast_range": [],
+          "effect_amounts": [],
+          "children": []
+        }
+      ],
+      "fixed_coefficient": 1.0,
+      "slot": "R"
+    }
+  }
+}
